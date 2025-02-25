@@ -1,0 +1,27 @@
+# filepath: /C:/XM_Cloud_Certification_LearnerAI/config/tasks.yaml
+
+get_XMCloud_topics_task:
+  description: >
+    Fetch and detail XM Cloud topics based on the provided list of topics: {topicList}.
+    For each topic, include a thorough explanation, covering key points and any relevant
+    subtopics. Make sure to reference credible sources or documentation links.
+  expected_output: >
+    A structured JSON (or dictionary) containing:
+    - The list of XM Cloud topics
+    - A comprehensive explanation for each topic
+    - One or more credible sources or links associated with each topic
+
+show_XMCloud_topicContents_task:
+  description: >
+    Expand the gathered XM Cloud topics into a **comprehensive** study resource. Provide:
+    - A **detailed** yet **structured** breakdown of each topic.
+    - Examples, **real-world use cases**, and key **exam tips**.
+    - A section on **common certification questions** related to each topic.
+    - Links to **official documentation** and further reading materials.
+
+  expected_output: >
+    A **well-structured, exam-ready** JSON response with:
+    - **Expanded** explanations of each topic.
+    - **Clear examples** to illustrate key concepts.
+    - **Common questions** that might appear in the exam.
+    - **References and links** to relevant official resources.
