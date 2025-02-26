@@ -3,7 +3,8 @@ from flask_cors import CORS
 import time
 
 # Import your crew
-from crew import XMCloudTrainer
+from generate_xmCloud_Quiz_crew import XMCloudQuizCrew
+from xm_clound_content_crew import XMCloudTrainer
 
 app = Flask(__name__)
 CORS(
@@ -42,6 +43,47 @@ def process_topics():
     except Exception as e:
         print(f"❌ Error processing topics with CrewAI: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/quiz/generate', methods=['POST'])
+def generate_quiz():
+    data = request.json
+    topic_list = data.get('topicList', [])
+
+    inputs = {"topicList": topic_list}
+    start_time = time.time()
+
+    quiz_crew = XMCloudQuizCrew()
+    # Run only the generate_quiz_task by calling generate_crew().kickoff()
+    result = quiz_crew.generate_crew().kickoff(inputs=inputs)
+
+    elapsed = time.time() - start_time
+    print(f"✅ generate_quiz ran in {elapsed:.2f} seconds")
+
+    # Convert CrewOutput -> dict, then jsonify
+    return jsonify(result.to_dict()), 200
+
+@app.route('/api/quiz/recheck', methods=['POST'])
+def recheck_quiz():
+    data = request.json
+    inputs = {
+      "existingQuiz": data.get("existingQuiz"),
+      "userAnswers": data.get("userAnswers"),
+    }
+    start_time = time.time()
+
+    quiz_crew = XMCloudQuizCrew()
+    # Run only the retry_reaccess_task by calling recheck_crew().kickoff()
+    result = quiz_crew.recheck_crew().kickoff(inputs=inputs)
+
+    elapsed = time.time() - start_time
+    print(f"✅ recheck_quiz ran in {elapsed:.2f} seconds")
+
+    return jsonify(result.to_dict()), 200
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

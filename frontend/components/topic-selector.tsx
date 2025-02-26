@@ -11,7 +11,15 @@ import type { TopicResponse } from "@/types/api"
 // Mock data for fallback when backend is unavailable
 const mockTopicData = {
   generateResponse: (topics: string[]): TopicResponse => {
-    const content: Record<string, { explanation: string; example: string; exam_tips: string; common_questions: string[] }> = {}
+    const content: Record<
+      string,
+      {
+        explanation: string
+        example: string
+        exam_tips: string
+        common_questions: string[]
+      }
+    > = {}
     const sources: Record<string, string> = {}
 
     topics.forEach((topic) => {
@@ -26,7 +34,9 @@ const mockTopicData = {
         ],
       }
 
-      sources[topic] = `https://developers.sitecore.com/learn/${topic.toLowerCase().replace(/\s+/g, "-")}`
+      sources[topic] = `https://developers.sitecore.com/learn/${topic
+        .toLowerCase()
+        .replace(/\s+/g, "-")}`
     })
 
     return {
@@ -44,7 +54,9 @@ export default function TopicSelector() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleTopicChange = (topic: string) => {
-    setSelectedTopics((prev) => (prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]))
+    setSelectedTopics((prev) =>
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
+    )
   }
 
   const handleSubmit = async () => {
@@ -53,6 +65,7 @@ export default function TopicSelector() {
       return
     }
 
+    // Turn on loading screen
     setIsLoading(true)
     setErrorMessage(null)
 
@@ -69,10 +82,10 @@ export default function TopicSelector() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // Add CORS headers
             Accept: "application/json",
           },
           body: JSON.stringify({ topicList: selectedTopics }),
+          signal: controller.signal,
         })
 
         clearTimeout(timeoutId)
@@ -98,40 +111,50 @@ export default function TopicSelector() {
       }
     } catch (error: any) {
       console.error("Error details:", error)
-
-      // Set a user-friendly error message
       setErrorMessage(
         `Could not connect to backend server: ${error.message || "Unknown error"}. Using fallback data instead.`,
       )
-
-      // We're still using the fallback data that was set by default
       console.log("Using fallback data due to error")
     } finally {
       // Store the data (either from backend or fallback) in localStorage
       localStorage.setItem("topicResults", JSON.stringify(data))
 
-      // Navigate to the results page after a short delay if there was an error
-      if (errorMessage) {
-        setTimeout(() => {
-          setIsLoading(false)
-          router.push("/results")
-        }, 2000)
-      } else {
-        setIsLoading(false)
-        router.push("/results")
-      }
+      // Navigate to the results page
+      router.push("/results")
     }
+  }
+
+  /**********************************************************************
+   * If isLoading is true, show a full-page loading screen:
+   **********************************************************************/
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-600 mb-4" />
+          <h2 className="text-xl font-medium text-gray-800">
+            Generating content for the topics...
+          </h2>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">XM Cloud Syllabus</h2>
-        <p className="text-gray-600 mb-4">Select the topics you want to learn more about:</p>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">
+          XM Cloud Syllabus
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Select the topics you want to learn more about:
+        </p>
       </div>
 
       {errorMessage && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">{errorMessage}</div>
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+          {errorMessage}
+        </div>
       )}
 
       <div className="space-y-6">
@@ -140,15 +163,21 @@ export default function TopicSelector() {
             <div className="flex items-center space-x-3 mb-3">
               <Checkbox
                 id={`select-all-${category.title}`}
-                checked={category.topics.every((topic) => selectedTopics.includes(topic))}
+                checked={category.topics.every((topic) =>
+                  selectedTopics.includes(topic),
+                )}
                 onCheckedChange={(checked) => {
                   if (checked) {
                     // Add all topics from this category that aren't already selected
-                    const topicsToAdd = category.topics.filter((topic) => !selectedTopics.includes(topic))
+                    const topicsToAdd = category.topics.filter(
+                      (topic) => !selectedTopics.includes(topic),
+                    )
                     setSelectedTopics((prev) => [...prev, ...topicsToAdd])
                   } else {
                     // Remove all topics from this category
-                    setSelectedTopics((prev) => prev.filter((topic) => !category.topics.includes(topic)))
+                    setSelectedTopics((prev) =>
+                      prev.filter((topic) => !category.topics.includes(topic)),
+                    )
                   }
                 }}
                 className="mt-1"
@@ -156,13 +185,19 @@ export default function TopicSelector() {
               <h3
                 className="font-medium text-lg text-gray-800 cursor-pointer"
                 onClick={() => {
-                  const allSelected = category.topics.every((topic) => selectedTopics.includes(topic))
+                  const allSelected = category.topics.every((topic) =>
+                    selectedTopics.includes(topic),
+                  )
                   if (allSelected) {
                     // Remove all topics from this category
-                    setSelectedTopics((prev) => prev.filter((topic) => !category.topics.includes(topic)))
+                    setSelectedTopics((prev) =>
+                      prev.filter((topic) => !category.topics.includes(topic)),
+                    )
                   } else {
                     // Add all topics from this category that aren't already selected
-                    const topicsToAdd = category.topics.filter((topic) => !selectedTopics.includes(topic))
+                    const topicsToAdd = category.topics.filter(
+                      (topic) => !selectedTopics.includes(topic),
+                    )
                     setSelectedTopics((prev) => [...prev, ...topicsToAdd])
                   }
                 }}
@@ -179,7 +214,10 @@ export default function TopicSelector() {
                     onCheckedChange={() => handleTopicChange(topic)}
                     className="mt-1"
                   />
-                  <label htmlFor={topic} className="text-gray-700 cursor-pointer">
+                  <label
+                    htmlFor={topic}
+                    className="text-gray-700 cursor-pointer"
+                  >
                     {topic}
                   </label>
                 </div>
@@ -192,20 +230,12 @@ export default function TopicSelector() {
       <div className="mt-8 flex justify-end">
         <Button
           onClick={handleSubmit}
-          disabled={isLoading || selectedTopics.length === 0}
+          disabled={selectedTopics.length === 0}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            "Proceed"
-          )}
+          Proceed
         </Button>
       </div>
     </div>
   )
 }
-

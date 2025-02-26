@@ -15,22 +15,26 @@ interface TopicContent {
 interface TopicResult {
   topics: string[]
   content: Record<string, TopicContent>
-  sources: Record<string, string>
+  sources: Record<string, string | string[]> // can be a single string or an array of strings
 }
 
 /**
- * Utility function to parse multiline explanation text
- * and detect lines that start with: "*   **Some Subtopic**"
- * We'll split them into bullet points. Everything else is a paragraph.
+ * Convert Markdown-style bold `**...**` to HTML <strong>...</strong>.
+ */
+function markdownToHTML(line: string) {
+  // Replace **some text** with <strong>some text</strong>
+  return line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+}
+
+/**
+ * Utility to parse multiline explanation text.
+ * We detect bullet lines that start with "*   **" as bullet points,
+ * and treat everything else as paragraphs.
  */
 function parseExplanationText(text: string) {
   // Split by new lines, trim empty lines
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean)
 
-  // We'll build an array of paragraphs or bullet lists
-  // For example:
-  //   "A composable DXP built on cloud..." -> normal paragraph
-  //   "*   **Agility and Flexibility:** Cloud-native..." -> bullet point
   const bulletPoints: string[] = []
   const paragraphs: string[] = []
 
@@ -54,16 +58,18 @@ export default function ResultsPage() {
   useEffect(() => {
     // Retrieve the results from localStorage
     const storedResults = localStorage.getItem("topicResults")
-
     if (storedResults) {
       setResults(JSON.parse(storedResults))
     }
-
     setLoading(false)
   }, [])
 
   const handleBackClick = () => {
     router.push("/")
+  }
+
+  const handleQuizClick = () => {
+    router.push("/quiz")
   }
 
   if (loading) {
@@ -83,7 +89,7 @@ export default function ResultsPage() {
         <div className="max-w-4xl mx-auto text-center py-12">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">No Results Found</h2>
           <p className="text-gray-600 mb-6">
-            It seems you haven't selected any topics yet or the results have been cleared.
+            It seems you haven&#39;t selected any topics yet or the results have been cleared.
           </p>
           <Button onClick={handleBackClick} className="bg-blue-600 hover:bg-blue-700">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -98,10 +104,15 @@ export default function ResultsPage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
-          <Button onClick={handleBackClick} variant="outline" className="mb-6">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Topic Selection
-          </Button>
+          <div className="flex items-center justify-between mb-6">
+            <Button onClick={handleBackClick} variant="outline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Topic Selection
+            </Button>
+            <Button onClick={handleQuizClick} className="bg-blue-600 hover:bg-blue-700">
+              Take the Quiz
+            </Button>
+          </div>
 
           <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Your Selected Topics</h1>
 
@@ -121,16 +132,22 @@ export default function ResultsPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-800 mb-2">Explanation</h3>
                     <div className="text-gray-700 space-y-3">
-                      {/* Render paragraphs first */}
+                      {/* Render paragraphs */}
                       {paragraphs.map((p, idx) => (
-                        <p key={idx}>{p}</p>
+                        <p
+                          key={idx}
+                          dangerouslySetInnerHTML={{ __html: markdownToHTML(p) }}
+                        />
                       ))}
 
-                      {/* Then render bullet points if present */}
+                      {/* Render bullet points */}
                       {bulletPoints.length > 0 && (
                         <ul className="list-disc list-inside space-y-2">
                           {bulletPoints.map((bp, idx) => (
-                            <li key={idx} dangerouslySetInnerHTML={{ __html: bp }} />
+                            <li
+                              key={idx}
+                              dangerouslySetInnerHTML={{ __html: markdownToHTML(bp) }}
+                            />
                           ))}
                         </ul>
                       )}
@@ -159,18 +176,42 @@ export default function ResultsPage() {
                     </ul>
                   </div>
 
-                  {/* Source Link */}
+                  {/* Source Links */}
                   {results.sources[topic] && (
                     <div className="pt-4 border-t">
-                      <a
-                        href={results.sources[topic]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                      >
-                        <span className="mr-1">Source</span>
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
+                      <h4 className="font-medium text-gray-800 mb-2">Sources</h4>
+
+                      {/* If sources is a single string */}
+                      {typeof results.sources[topic] === "string" && (
+                        <a
+                          href={results.sources[topic] as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                        >
+                          <span className="mr-1">{results.sources[topic]}</span>
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+
+                      {/* If sources is an array */}
+                      {Array.isArray(results.sources[topic]) && (
+                        <ul className="list-disc list-inside space-y-2">
+                          {(results.sources[topic] as string[]).map((link, i) => (
+                            <li key={i}>
+                              <a
+                                href={link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                              >
+                                <span className="mr-1">{link}</span>
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
                 </div>

@@ -10,7 +10,7 @@ export default function Home() {
               XM Cloud Certification Topics
             </h1>
             <p className="text-lg text-gray-600">
-              Select the topics you'd like to explore and click "Proceed" to get detailed information.
+              Select the topics you&apos;d like to explore and click &quot;Proceed&quot; to get detailed information.
             </p>
           </div>
           <TopicSelector />
