@@ -1,10 +1,8 @@
-# filepath: /C:/XM_Cloud_Certification_LearnerAI/generate_xmCloud_Quiz_crew.py
-
 import yaml
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import os
 from dotenv import load_dotenv
 
@@ -29,6 +27,8 @@ class MCQQuestion(BaseModel):
     question: str
     options: List[str]
     correct_answer: str
+    topic: str
+    hint: Optional[str] = None
 
 class XMCloudQuiz(BaseModel):
     topics: List[str]

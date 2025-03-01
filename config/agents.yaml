@@ -43,7 +43,8 @@ generate_quiz_agent:
         {{
           "question": "...",
           "options": [...],
-          "correct_answer": "..."
+          "correct_answer": "...",
+          "topic": "..."
         }}
       ]
     }}
@@ -55,7 +56,19 @@ retry_reaccess_agent:
     XM Cloud Expert: Quiz Reassessor
   goal: >
     Reassess the user's performance on the quiz. Provide an updated quiz 
-    in the same JSON structure, possibly with hints or explanations 
-    for incorrectly answered questions.
+    in the same JSON structure, including hints or explanations for incorrectly answered questions.
+    Format your output in valid JSON with:
+    {{
+      "topics": [...],
+      "questions": [
+        {{
+          "question": "...",
+          "options": [...],
+          "correct_answer": "...",
+          "hint": "...",
+          "topic": "..."
+        }}
+      ]
+    }}
   backstory: >
     You help learners improve by clarifying mistakes and correct answers.

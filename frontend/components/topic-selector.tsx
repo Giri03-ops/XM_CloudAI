@@ -8,45 +8,6 @@ import { topicData } from "@/data/topics"
 import { Loader2 } from "lucide-react"
 import type { TopicResponse } from "@/types/api"
 
-// Mock data for fallback when backend is unavailable
-const mockTopicData = {
-  generateResponse: (topics: string[]): TopicResponse => {
-    const content: Record<
-      string,
-      {
-        explanation: string
-        example: string
-        exam_tips: string
-        common_questions: string[]
-      }
-    > = {}
-    const sources: Record<string, string> = {}
-
-    topics.forEach((topic) => {
-      content[topic] = {
-        explanation: `${topic} is a key concept in XM Cloud that enables developers to efficiently build and manage digital experiences.`,
-        example: `When implementing ${topic}, developers typically start by understanding the requirements and then applying best practices specific to XM Cloud.`,
-        exam_tips: `For the certification exam, focus on the practical applications of ${topic} and how it integrates with other XM Cloud components.`,
-        common_questions: [
-          `What is the purpose of ${topic} in XM Cloud?`,
-          `How does ${topic} improve the development workflow?`,
-          `What are common challenges when implementing ${topic}?`,
-        ],
-      }
-
-      sources[topic] = `https://developers.sitecore.com/learn/${topic
-        .toLowerCase()
-        .replace(/\s+/g, "-")}`
-    })
-
-    return {
-      topics,
-      content,
-      sources,
-    }
-  },
-}
-
 export default function TopicSelector() {
   const router = useRouter()
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
@@ -55,7 +16,7 @@ export default function TopicSelector() {
 
   const handleTopicChange = (topic: string) => {
     setSelectedTopics((prev) =>
-      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic]
     )
   }
 
@@ -65,12 +26,11 @@ export default function TopicSelector() {
       return
     }
 
-    // Turn on loading screen
     setIsLoading(true)
     setErrorMessage(null)
 
-    // Use fallback data by default
-    let data: TopicResponse = mockTopicData.generateResponse(selectedTopics)
+    // We start with no data; we wait for the backend response to populate it
+    let data: TopicResponse | null = null
 
     try {
       // Try to connect to the Flask backend with a timeout
@@ -82,10 +42,10 @@ export default function TopicSelector() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            // Add CORS headers if needed
             Accept: "application/json",
           },
           body: JSON.stringify({ topicList: selectedTopics }),
-          signal: controller.signal,
         })
 
         clearTimeout(timeoutId)
@@ -103,7 +63,7 @@ export default function TopicSelector() {
 
         if (fetchError.name === "AbortError") {
           console.warn("Request timed out")
-          throw new Error("Request to backend timed out. Using fallback data.")
+          throw new Error("Request to backend timed out.")
         } else {
           console.warn("Fetch error:", fetchError)
           throw fetchError
@@ -111,22 +71,33 @@ export default function TopicSelector() {
       }
     } catch (error: any) {
       console.error("Error details:", error)
-      setErrorMessage(
-        `Could not connect to backend server: ${error.message || "Unknown error"}. Using fallback data instead.`,
-      )
-      console.log("Using fallback data due to error")
-    } finally {
-      // Store the data (either from backend or fallback) in localStorage
-      localStorage.setItem("topicResults", JSON.stringify(data))
 
-      // Navigate to the results page
-      router.push("/results")
+      // Set a user-friendly error message
+      setErrorMessage(error.message || "Unknown error")
+    } finally {
+      // If we got valid data, store it and push to results
+      if (data) {
+        localStorage.setItem("topicResults", JSON.stringify(data))
+
+        // If no error, go straight to results
+        if (!errorMessage) {
+          setIsLoading(false)
+          router.push("/results")
+        } else {
+          // If there was an error message along with data, wait 2 seconds then push
+          setTimeout(() => {
+            setIsLoading(false)
+            router.push("/results")
+          }, 2000)
+        }
+      } else {
+        // If there's no data (e.g. error or timeout occurred), we stop loading
+        setIsLoading(false)
+      }
     }
   }
 
-  /**********************************************************************
-   * If isLoading is true, show a full-page loading screen:
-   **********************************************************************/
+  // If isLoading is true, show a full-page loading screen
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
@@ -164,19 +135,19 @@ export default function TopicSelector() {
               <Checkbox
                 id={`select-all-${category.title}`}
                 checked={category.topics.every((topic) =>
-                  selectedTopics.includes(topic),
+                  selectedTopics.includes(topic)
                 )}
                 onCheckedChange={(checked) => {
                   if (checked) {
-                    // Add all topics from this category that aren't already selected
+                    // Add all topics from this category that aren't selected
                     const topicsToAdd = category.topics.filter(
-                      (topic) => !selectedTopics.includes(topic),
+                      (topic) => !selectedTopics.includes(topic)
                     )
                     setSelectedTopics((prev) => [...prev, ...topicsToAdd])
                   } else {
                     // Remove all topics from this category
                     setSelectedTopics((prev) =>
-                      prev.filter((topic) => !category.topics.includes(topic)),
+                      prev.filter((topic) => !category.topics.includes(topic))
                     )
                   }
                 }}
@@ -186,17 +157,15 @@ export default function TopicSelector() {
                 className="font-medium text-lg text-gray-800 cursor-pointer"
                 onClick={() => {
                   const allSelected = category.topics.every((topic) =>
-                    selectedTopics.includes(topic),
+                    selectedTopics.includes(topic)
                   )
                   if (allSelected) {
-                    // Remove all topics from this category
                     setSelectedTopics((prev) =>
-                      prev.filter((topic) => !category.topics.includes(topic)),
+                      prev.filter((topic) => !category.topics.includes(topic))
                     )
                   } else {
-                    // Add all topics from this category that aren't already selected
                     const topicsToAdd = category.topics.filter(
-                      (topic) => !selectedTopics.includes(topic),
+                      (topic) => !selectedTopics.includes(topic)
                     )
                     setSelectedTopics((prev) => [...prev, ...topicsToAdd])
                   }
@@ -214,10 +183,7 @@ export default function TopicSelector() {
                     onCheckedChange={() => handleTopicChange(topic)}
                     className="mt-1"
                   />
-                  <label
-                    htmlFor={topic}
-                    className="text-gray-700 cursor-pointer"
-                  >
+                  <label htmlFor={topic} className="text-gray-700 cursor-pointer">
                     {topic}
                   </label>
                 </div>
@@ -230,7 +196,7 @@ export default function TopicSelector() {
       <div className="mt-8 flex justify-end">
         <Button
           onClick={handleSubmit}
-          disabled={selectedTopics.length === 0}
+          disabled={isLoading || selectedTopics.length === 0}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
         >
           Proceed

@@ -15,14 +15,14 @@ interface TopicContent {
 interface TopicResult {
   topics: string[]
   content: Record<string, TopicContent>
-  sources: Record<string, string | string[]> // can be a single string or an array of strings
+  // Sources can be either a single string or an array of strings:
+  sources: Record<string, string | string[]>
 }
 
 /**
  * Convert Markdown-style bold `**...**` to HTML <strong>...</strong>.
  */
 function markdownToHTML(line: string) {
-  // Replace **some text** with <strong>some text</strong>
   return line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
 }
 
@@ -32,16 +32,14 @@ function markdownToHTML(line: string) {
  * and treat everything else as paragraphs.
  */
 function parseExplanationText(text: string) {
-  // Split by new lines, trim empty lines
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean)
 
   const bulletPoints: string[] = []
   const paragraphs: string[] = []
 
   lines.forEach((line) => {
-    // If line starts with "*   **", treat as a bullet subtopic
     if (line.startsWith("*   **")) {
-      bulletPoints.push(line.substring(1).trim()) // remove the first '*' and trim
+      bulletPoints.push(line.substring(1).trim())
     } else {
       paragraphs.push(line)
     }
@@ -56,7 +54,6 @@ export default function ResultsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Retrieve the results from localStorage
     const storedResults = localStorage.getItem("topicResults")
     if (storedResults) {
       setResults(JSON.parse(storedResults))
@@ -114,14 +111,20 @@ export default function ResultsPage() {
             </Button>
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Your Selected Topics</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
+            Your Selected Topics
+          </h1>
 
           {results.topics.map((topic) => {
             const topicInfo = results.content[topic]
             const { bulletPoints, paragraphs } = parseExplanationText(topicInfo.explanation)
 
+            // We'll handle explanation, example, exam tips, and questions as before:
             return (
-              <div key={topic} className="mb-10 bg-white rounded-xl shadow-lg overflow-hidden">
+              <div
+                key={topic}
+                className="mb-10 bg-white rounded-xl shadow-lg overflow-hidden"
+              >
                 {/* Topic Title */}
                 <div className="bg-blue-600 px-6 py-4">
                   <h2 className="text-xl font-semibold text-white">{topic}</h2>
@@ -132,15 +135,14 @@ export default function ResultsPage() {
                   <div>
                     <h3 className="text-lg font-medium text-gray-800 mb-2">Explanation</h3>
                     <div className="text-gray-700 space-y-3">
-                      {/* Render paragraphs */}
+                      {/* Paragraphs */}
                       {paragraphs.map((p, idx) => (
                         <p
                           key={idx}
                           dangerouslySetInnerHTML={{ __html: markdownToHTML(p) }}
                         />
                       ))}
-
-                      {/* Render bullet points */}
+                      {/* Bullet Points */}
                       {bulletPoints.length > 0 && (
                         <ul className="list-disc list-inside space-y-2">
                           {bulletPoints.map((bp, idx) => (
@@ -168,7 +170,9 @@ export default function ResultsPage() {
 
                   {/* Common Questions */}
                   <div>
-                    <h3 className="text-lg font-medium text-gray-800 mb-2">Common Questions</h3>
+                    <h3 className="text-lg font-medium text-gray-800 mb-2">
+                      Common Questions
+                    </h3>
                     <ul className="list-disc pl-5 space-y-2 text-gray-700">
                       {topicInfo.common_questions.map((question, index) => (
                         <li key={index}>{question}</li>
@@ -176,42 +180,49 @@ export default function ResultsPage() {
                     </ul>
                   </div>
 
-                  {/* Source Links */}
+                  {/* Sources */}
                   {results.sources[topic] && (
                     <div className="pt-4 border-t">
-                      <h4 className="font-medium text-gray-800 mb-2">Sources</h4>
+                      <h4 className="font-medium text-gray-800 mb-3">Sources</h4>
 
-                      {/* If sources is a single string */}
-                      {typeof results.sources[topic] === "string" && (
-                        <a
-                          href={results.sources[topic] as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                        >
-                          <span className="mr-1">{results.sources[topic]}</span>
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      )}
-
-                      {/* If sources is an array */}
-                      {Array.isArray(results.sources[topic]) && (
-                        <ul className="list-disc list-inside space-y-2">
-                          {(results.sources[topic] as string[]).map((link, i) => (
-                            <li key={i}>
+                      {/**
+                       * If it's a string with comma-separated links, split it.
+                       * If it's an array, use it directly.
+                       */}
+                      <div className="flex flex-col space-y-2">
+                        {typeof results.sources[topic] === "string"
+                          ? // It's a single string, possibly with commas
+                            results.sources[topic]
+                              .split(",")
+                              .map((link, i) => {
+                                const trimmed = link.trim()
+                                return (
+                                  <a
+                                    key={i}
+                                    href={trimmed}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg flex items-center transition-colors duration-200"
+                                  >
+                                    <span className="flex-1 break-all">{trimmed}</span>
+                                    <ExternalLink className="h-4 w-4 flex-shrink-0 ml-2" />
+                                  </a>
+                                )
+                              })
+                          : // It's an array of links
+                            (results.sources[topic] as string[]).map((link, i) => (
                               <a
+                                key={i}
                                 href={link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg flex items-center transition-colors duration-200"
                               >
-                                <span className="mr-1">{link}</span>
-                                <ExternalLink className="h-4 w-4" />
+                                <span className="flex-1 break-all">{link}</span>
+                                <ExternalLink className="h-4 w-4 flex-shrink-0 ml-2" />
                               </a>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                            ))}
+                      </div>
                     </div>
                   )}
                 </div>

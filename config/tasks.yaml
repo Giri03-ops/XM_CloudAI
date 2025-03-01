@@ -27,32 +27,35 @@ get_and_show_XMCloud_content_task:
 generate_quiz_task:
   description: >
     Generate a 10-question MCQ quiz for {topicList}.
-    Each question must have multiple choices and exactly one correct answer.
+    Each question must have multiple choices, exactly one correct answer, 
+    and indicate from which topic the question originates.
   expected_output: >
-    {
+    {{
       "topics": [...],
       "questions": [
-        {
+        {{
           "question": "...",
           "options": [...],
-          "correct_answer": "..."
-        }
+          "correct_answer": "...",
+          "topic": "..."
+        }}
       ]
-    }
+    }}
 
 retry_reaccess_task:
   description: >
     Reassess the user's quiz. Input includes the entire quiz plus userAnswers. 
     Output a revised quiz with clarifications or hints for incorrect answers.
   expected_output: >
-    {
+    {{
       "topics": [...],
       "questions": [
-        {
+        {{
           "question": "...",
           "options": [...],
           "correct_answer": "...",
-          "hint": "..."
-        }
+          "hint": "...",
+          "topic": "..."
+        }}
       ]
-    }
+    }}

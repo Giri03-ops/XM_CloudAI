@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import type { QuizResponse, QuizState } from "@/types/quiz"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabaseClient" // Import supabase client
 
 export default function QuizPage() {
   const router = useRouter()
@@ -32,8 +33,13 @@ export default function QuizPage() {
   ])
 
   const [currentMessage, setCurrentMessage] = useState(0)
+  const fetchDone = useRef(false) // Flag to prevent duplicate fetches
 
   useEffect(() => {
+    // Prevent multiple fetches even if the component re-renders
+    if (fetchDone.current) return
+    fetchDone.current = true
+
     const fetchQuiz = async () => {
       try {
         const storedResults = localStorage.getItem("topicResults")
@@ -78,25 +84,102 @@ export default function QuizPage() {
     }))
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!quizData) return
 
-    const correct = quizData.questions.reduce((acc, q, index) => {
-      return acc + (quizState.currentAnswers[index] === q.correct_answer ? 1 : 0)
-    }, 0)
+    // Compute per-topic scores
+    const topicScores: Record<string, { correct: number; total: number }> = {}
+    quizData.questions.forEach((q, index) => {
+      const topic = q.topic
+      if (!topicScores[topic]) {
+        topicScores[topic] = { correct: 0, total: 0 }
+      }
+      topicScores[topic].total += 1
+      if (quizState.currentAnswers[index] === q.correct_answer) {
+        topicScores[topic].correct += 1
+      }
+    })
 
+    // Compute overall score for display
+    const overallCorrect = Object.values(topicScores).reduce((sum, { correct }) => sum + correct, 0)
+    const overallTotal = Object.values(topicScores).reduce((sum, { total }) => sum + total, 0)
+
+    // Update quiz state with overall score
     setQuizState((prev) => ({
       ...prev,
       isSubmitted: true,
       score: {
-        correct,
-        total: quizData.questions.length,
+        correct: overallCorrect,
+        total: overallTotal,
       },
     }))
+
+    // Prepare payload for Supabase: one record per topic
+    try {
+      // Replace with actual user email or get from auth context
+      const userEmail = "giri.chettiar@gmail.com"
+
+      const payload = Object.entries(topicScores).map(([topic, { correct, total }]) => ({
+        user_email: userEmail,
+        topic: topic,
+        score: correct,
+        total_questions: total,
+        // created_at will be handled by Supabase if the column has a default value
+      }))
+
+      const { data, error } = await supabase
+        .from("quiz_attempts")
+        .insert(payload)
+        .select()
+
+      if (error) {
+        console.error("Error saving quiz results:", error)
+      } else {
+        console.log("Quiz results saved successfully:", data)
+      }
+    } catch (err) {
+      console.error("Unexpected error saving quiz results:", err)
+    }
   }
 
   const handleBack = () => {
     router.push("/results")
+  }
+
+  const handleRetry = async () => {
+    if (!quizData) return
+
+    setLoading(true)
+    try {
+      const response = await fetch("http://127.0.0.1:5000/api/quiz/recheck", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          existingQuiz: quizData,          // The entire existing quiz object
+          userAnswers: quizState.currentAnswers, // The user's answers
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to recheck quiz")
+      }
+
+      const data = await response.json()
+      // Update state with the new "rechecked" quiz data
+      setQuizData(data)
+
+      // Reset quiz state for a fresh attempt
+      setQuizState({
+        currentAnswers: {},
+        isSubmitted: false,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -105,6 +188,7 @@ export default function QuizPage() {
     }, 3000)
     return () => clearInterval(interval)
   }, [wittyMessages])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
@@ -112,7 +196,9 @@ export default function QuizPage() {
           <Loader2 className="h-16 w-16 animate-spin mx-auto text-blue-600 mb-6" />
           <h2 className="text-2xl font-medium text-gray-800 mb-4">Generating your quiz...</h2>
           <div className="h-20">
-            <p className="text-gray-600 italic transition-opacity duration-500">&quot;{wittyMessages[currentMessage]}&quot;</p>
+            <p className="text-gray-600 italic transition-opacity duration-500">
+              &quot;{wittyMessages[currentMessage]}&quot;
+            </p>
           </div>
         </div>
       </div>
@@ -161,11 +247,13 @@ export default function QuizPage() {
           <Card className="p-6">
             <h1 className="text-3xl font-bold text-gray-800 mb-6">Test Your Knowledge</h1>
 
+            {/* Show score if user has submitted */}
             {quizState.isSubmitted && quizState.score && (
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <h2 className="text-xl font-semibold mb-2">Quiz Results</h2>
                 <p className="text-lg">
-                  You got <span className="font-bold text-blue-600">{quizState.score.correct}</span> out of{" "}
+                  You got{" "}
+                  <span className="font-bold text-blue-600">{quizState.score.correct}</span> out of{" "}
                   <span className="font-bold">{quizState.score.total}</span> questions correct!
                 </p>
               </div>
@@ -194,10 +282,14 @@ export default function QuizPage() {
                           className={cn(
                             "flex items-center space-x-2 rounded-lg border p-4 transition-colors",
                             showCorrect && "bg-green-50 border-green-200",
-                            showIncorrect && "bg-red-50 border-red-200",
+                            showIncorrect && "bg-red-50 border-red-200"
                           )}
                         >
-                          <RadioGroupItem value={option} id={`q${index}-${option}`} disabled={quizState.isSubmitted} />
+                          <RadioGroupItem
+                            value={option}
+                            id={`q${index}-${option}`}
+                            disabled={quizState.isSubmitted}
+                          />
                           <Label htmlFor={`q${index}-${option}`} className="flex-grow cursor-pointer">
                             {option}
                           </Label>
@@ -220,10 +312,15 @@ export default function QuizPage() {
                 Submit Quiz
               </Button>
             )}
+
+            {quizState.isSubmitted && (
+              <Button onClick={handleRetry} className="w-full mt-4 bg-blue-600 hover:bg-blue-700">
+                Retry Quiz
+              </Button>
+            )}
           </Card>
         </div>
       </div>
     </div>
   )
 }
-
