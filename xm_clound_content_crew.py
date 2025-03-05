@@ -1,5 +1,3 @@
-# filepath: /C:/XM_Cloud_Certification_LearnerAI/xm_cloud_trainer.py
-
 import yaml
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
@@ -18,17 +16,19 @@ llm = LLM(
     google_api_key=os.getenv("GEMINI_API_KEY"),
 )
 
+#model
 class TopicDetail(BaseModel):
     explanation: Optional[str] = None
     example: Optional[str] = None
     exam_tips: Optional[str] = None
     common_questions: Optional[List[str]] = None
-
+#Model for expected out used by task
 class ShowPrimaryContentSources(BaseModel):
     topics: List[str] = Field(..., description="List of topics selected")
     content: Dict[str, TopicDetail] = Field(default_factory=dict, description="Detailed content for each topic")
     sources: Dict[str, str] = Field(default_factory=dict, description="Primary sources for the fetched content")
 
+#CrewBase Class
 @CrewBase
 class XMCloudTrainer:
     """

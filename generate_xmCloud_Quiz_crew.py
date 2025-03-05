@@ -10,9 +10,9 @@ from crewai_tools import SerperDevTool, ScrapeWebsiteTool
 
 load_dotenv()
 
-################################################################################
-# 1) LLM CONFIG
-################################################################################
+
+#LLM CONFIG
+
 llm = LLM(
     model="gemini/gemini-2.0-flash-exp",
     temperature=0.5,
@@ -20,9 +20,9 @@ llm = LLM(
     google_api_key=os.getenv("GEMINI_API_KEY"),
 )
 
-################################################################################
-# 2) Pydantic Models
-################################################################################
+
+#Pydantic Models for the expected output of the tasks
+
 class MCQQuestion(BaseModel):
     question: str
     options: List[str]
@@ -34,9 +34,9 @@ class XMCloudQuiz(BaseModel):
     topics: List[str]
     questions: List[MCQQuestion]
 
-################################################################################
-# 3) CREW CLASS
-################################################################################
+
+#CREW CLASS
+
 @CrewBase
 class XMCloudQuizCrew:
     """
@@ -56,9 +56,7 @@ class XMCloudQuizCrew:
         with open("config/tasks.yaml", "r") as f:
             self.task_config = yaml.safe_load(f)
 
-    # --------------------------------------------------------------------------
     # Agents
-    # --------------------------------------------------------------------------
     @agent
     def generate_quiz_agent(self) -> Agent:
         """Agent that creates a 10-question MCQ quiz."""
@@ -81,9 +79,8 @@ class XMCloudQuizCrew:
             allow_delegation=False,
         )
 
-    # --------------------------------------------------------------------------
+    
     # Tasks
-    # --------------------------------------------------------------------------
     @task
     def generate_quiz_task(self) -> Task:
         """Generates the quiz by calling generate_quiz_agent."""
@@ -102,9 +99,7 @@ class XMCloudQuizCrew:
             output_json=XMCloudQuiz
         )
 
-    # --------------------------------------------------------------------------
-    # 4) Two Mini-Crews
-    # --------------------------------------------------------------------------
+    # Crew
     @crew
     def generate_crew(self) -> Crew:
         """
