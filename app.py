@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flasgger import Swagger, swag_from
 import time
 
 # Import your crew
@@ -7,6 +8,7 @@ from generate_xmCloud_Quiz_crew import XMCloudQuizCrew
 from xm_clound_content_crew import XMCloudTrainer
 
 app = Flask(__name__)
+swagger = Swagger(app)
 CORS(
     app,
     resources={r"/api/*": {"origins": "*"}},
@@ -14,6 +16,7 @@ CORS(
 )  # Enable CORS for all routes
 
 @app.route('/api/topics', methods=['POST'])
+@swag_from('swagger/process_topics.yml')
 def process_topics():
     """
     Expects a JSON body like:
@@ -46,6 +49,7 @@ def process_topics():
 
 
 @app.route('/api/quiz/generate', methods=['POST'])
+@swag_from('swagger/generate_quiz.yml')
 def generate_quiz():
     data = request.json
     topic_list = data.get('topicList', [])
@@ -64,6 +68,7 @@ def generate_quiz():
     return jsonify(result.to_dict()), 200
 
 @app.route('/api/quiz/recheck', methods=['POST'])
+@swag_from('swagger/recheck_quiz.yml')
 def recheck_quiz():
     data = request.json
     inputs = {
