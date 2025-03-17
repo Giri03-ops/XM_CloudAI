@@ -1,0 +1,19 @@
+# swagger/browser_agent.yml
+tags:
+  - Browser Agent
+parameters:
+  - name: body
+    in: body
+    required: true
+    schema:
+      type: object
+      properties:
+        task:
+          type: string
+responses:
+  200:
+    description: A JSON object containing the result of the browser automation task
+  400:
+    description: "No task provided"
+  500:
+    description: "Error running browser agent"
